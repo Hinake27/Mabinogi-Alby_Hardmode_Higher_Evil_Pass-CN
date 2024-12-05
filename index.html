@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>艾菲通行證與手紡車鑰匙計算工具</title>
     <style>
+        /* 保留原有樣式 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -119,6 +120,70 @@
             animation: pulse 3s infinite;
         }
 
+        /* 新增開關按鈕樣式 */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(20, 55, 82, 0.8);
+            border: 1px solid #436279;
+            border-radius: 3px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin: 0 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid #436279;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #4a9eff;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(74, 158, 255, 0.3);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .discount-text {
+            font-size: clamp(14px, 1.5vw, 18px);
+            color: #8aabcb;
+        }
+
         @keyframes pulse {
             50% { 
                 transform: scale(1.05);
@@ -135,6 +200,15 @@
 </head>
 <body>
     <div class="container">
+        <div class="switch-container">
+            <span class="discount-text">禮拜三秘藥優惠</span>
+            <label class="switch">
+                <input type="checkbox" id="wednesdayDiscount" oninput="calc()">
+                <span class="slider"></span>
+            </label>
+            <span class="discount-text">95折</span>
+        </div>
+
         <div class="base-window">
             <div class="header">艾菲高級困難通行證計算</div>
             <div class="grid">
@@ -173,55 +247,53 @@
     </div>
 
     <script>
-function formatChineseNumber(num) {
-    if (num === 0) return '0';
-    
-    const units = ['', '萬', '億', '兆', '京'];
-    const segments = [];
-    let tempNum = num;
-    
-    // 處理每四位數一個單位
-    for (let i = 0; i < units.length; i++) {
-        const segment = tempNum % 10000;
-        if (segment !== 0 || i === 0) {  // 確保至少顯示個位數
-            let formattedSegment;
-            if (i === 0) {
-                // 個位數如果是0就不顯示
-                formattedSegment = segment === 0 ? '' : segment.toString();
-            } else {
-                // 其他單位需要補零，但移除前導零
-                formattedSegment = segment.toString().padStart(4, '0');
-                // 移除前導零，除非是完全的0000
-                if (formattedSegment !== '0000') {
-                    formattedSegment = parseInt(formattedSegment).toString();
+        function formatChineseNumber(num) {
+            if (num === 0) return '0';
+            
+            const units = ['', '萬', '億', '兆', '京'];
+            const segments = [];
+            let tempNum = num;
+            
+            for (let i = 0; i < units.length; i++) {
+                const segment = tempNum % 10000;
+                if (segment !== 0 || i === 0) {
+                    let formattedSegment;
+                    if (i === 0) {
+                        formattedSegment = segment === 0 ? '' : segment.toString();
+                    } else {
+                        formattedSegment = segment.toString().padStart(4, '0');
+                        if (formattedSegment !== '0000') {
+                            formattedSegment = parseInt(formattedSegment).toString();
+                        }
+                    }
+                    if (formattedSegment !== '') {
+                        segments.unshift(formattedSegment + units[i]);
+                    }
                 }
+                tempNum = Math.floor(tempNum / 10000);
+                if (tempNum === 0) break;
             }
-            // 只在非空值時添加到結果中
-            if (formattedSegment !== '') {
-                segments.unshift(formattedSegment + units[i]);
-            }
+            
+            return segments.join('') || '0';
         }
-        tempNum = Math.floor(tempNum / 10000);
-        if (tempNum === 0) break;
-    }
-    
-    return segments.join('') || '0';  // 如果結果是空字串，返回'0'
-}
 
         function calc() {
-            // 通行證計算
+            // 獲取並驗證輸入值
             const passPrice = +document.getElementById('passPrice').value || 0;
             const passQty = +document.getElementById('passQuantity').value || 1;
-            const potionPrice = 50000;
+            const cocoonPrice = +document.getElementById('cocoonPrice').value || 0;
+            const keyQty = +document.getElementById('keyQuantity').value || 1;
+            const isWednesday = document.getElementById('wednesdayDiscount').checked;
+
+            // 常數設定
+            const potionPrice = isWednesday ? 50000 * 0.95 : 50000; // 只有秘藥價格套用折扣
             const potionNeeded = 3;
+            const cocoonNeeded = 5;
+
+            // 計算成本
             const passCost = passPrice * passQty;
             const potionCost = potionPrice * potionNeeded * passQty;
             const passTotal = passCost + potionCost;
-
-            // 鑰匙計算
-            const cocoonPrice = +document.getElementById('cocoonPrice').value || 0;
-            const keyQty = +document.getElementById('keyQuantity').value || 1;
-            const cocoonNeeded = 5;
             const keyTotal = cocoonPrice * cocoonNeeded * keyQty;
 
             // 更新顯示
@@ -230,6 +302,7 @@ function formatChineseNumber(num) {
                 <div class="value">通行證：${formatChineseNumber(passCost)} | 秘藥：${formatChineseNumber(potionCost)}</div>
                 <div class="total">總成本：${formatChineseNumber(passTotal)} 瑪幣</div>
                 <div class="label">平均：${formatChineseNumber(Math.round(passTotal/passQty))} 瑪幣/張</div>
+                ${isWednesday ? '<div class="label" style="color: #4a9eff">秘藥已套用禮拜三95折優惠！</div>' : ''}
             `;
 
             document.getElementById('keyResult').innerHTML = `
@@ -242,6 +315,7 @@ function formatChineseNumber(num) {
                 總成本：${formatChineseNumber(passTotal + keyTotal)} 瑪幣<br>
                 <div style="font-size:0.4em;margin-top:10px">
                     (通行證：${formatChineseNumber(passTotal)} + 鑰匙：${formatChineseNumber(keyTotal)})
+                    ${isWednesday ? '<br><span style="color: #4a9eff">秘藥已套用禮拜三95折優惠！</span>' : ''}
                 </div>
             `;
         }
