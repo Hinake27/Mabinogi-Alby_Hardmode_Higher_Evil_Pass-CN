@@ -1,326 +1,345 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>艾菲通行證與手紡車鑰匙計算工具</title>
-    <style>
-        /* 保留原有樣式 */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>艾菲通行證與手紡車鑰匙｜簡易計算器（步驟版）</title>
+  <style>
+    /* === 基礎與秋季配色 === */
+    *{ box-sizing:border-box; margin:0; padding:0; transition: background-color .25s, color .25s, border-color .25s, transform .2s; }
+    :root{
+      --bg:#fff8f0; --bg-accent:#ffedd8; --ink:#47372a; --muted:#7c6a58;
+      --primary:#d2691e; --primary-2:#ff9a3d; --primary-3:#a0522d;
+      --soft:#f7e7d6; --card:#ffffff; --input:#ecd8c7; --ring: rgba(210,105,30,.25);
+      --shadow: 0 10px 35px rgba(160,82,45,.12); --radius: 14px; --scale-desktop: .92;
+    }
+    body{
+      min-height:100vh; padding:22px; overflow-x:hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", Arial, sans-serif;
+      color:var(--ink); line-height:1.65;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, var(--bg-accent), transparent 70%),
+        radial-gradient(1000px 500px at 110% 10%, var(--bg-accent), transparent 70%),
+        var(--bg);
+    }
 
-        body {
-            background: #1a1a1a;
-            font-family: "Microsoft JhengHei", sans-serif;
-            color: #fff;
-            min-height: 100vh;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    /* 背景秋葉（柔和） */
+    .leaf-layer{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,.0), rgba(0,0,0,.2) 10%, rgba(0,0,0,.7) 45%, rgba(0,0,0,.95)); }
+    .leaf{ position:absolute; top:-8vh; font-size:clamp(10px,2.2vw,18px); opacity:.85;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,.12)); animation: fall linear var(--dur) var(--delay) infinite; }
+    .leaf::before{ content:""; display:block; width:1em; height:.85em; border-radius:60% 60% 60% 0;
+      background: var(--leaf-color, #d2691e); transform: rotate(var(--rot,-20deg)); }
+    @keyframes fall{
+      0%{ transform: translate3d(var(--x, 0vw), -10vh, 0) rotate(0deg); }
+      50%{ transform: translate3d(calc(var(--x, 0vw) + 5vw), 50vh, 0) rotate(180deg); }
+      100%{ transform: translate3d(calc(var(--x, 0vw) - 4vw), 110vh, 0) rotate(360deg); }
+    }
 
-        .container { max-width: 1200px; width: 100%; margin: auto; }
+    /* 容器與縮放 */
+    .wrap{ position:relative; z-index:1; max-width: 880px; margin:0 auto;
+      transform: scale(var(--scale-desktop)); transform-origin: top center; }
+    @media (max-width: 640px){ :root{ --scale-desktop: 1; } }
+    .container{
+      background: linear-gradient(180deg, rgba(255,255,255,.75), rgba(255,255,255,.92)), var(--card);
+      border:1px solid rgba(160,82,45,.12);
+      border-radius: calc(var(--radius) + 6px);
+      box-shadow: var(--shadow);
+      padding:20px;
+    }
+    .header{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+    h1{
+      font-size: clamp(20px,2.2vw,26px); font-weight:800; letter-spacing:.4px;
+      background: linear-gradient(90deg, var(--primary), var(--primary-2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .sub{ color:var(--muted); font-size:14px; }
 
-        .base-window {
-            background: rgba(14, 42, 63, 0.95);
-            border: 1px solid #436279;
-            border-radius: 3px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
+    /* 步驟卡片 */
+    .step{
+      background:#fff; border:1px solid var(--input); border-radius:12px; padding:14px; margin-bottom:14px;
+    }
+    .step-title{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .badge{
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      color:#fff; font-weight:900; border-radius:999px; padding:4px 10px; font-size:12px; letter-spacing:.4px;
+      box-shadow: 0 6px 14px rgba(210,105,30,.22);
+    }
+    .title-text{ font-weight:800; color:var(--ink); }
 
-        .header {
-            background: #1c4565;
-            padding: 10px;
-            border: 1px solid #436279;
-            border-radius: 3px;
-            text-align: center;
-            margin-bottom: 10px;
-            font-size: clamp(16px, 2vw, 24px);
-            font-weight: 700;
-            text-shadow: 0 0 5px #4a9eff;
-        }
+    /* 格線與欄位 */
+    .grid{ display:grid; gap:10px; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); }
+    .cell{ background: linear-gradient(180deg, #fff, #fff7ef);
+      border:1px solid var(--input); border-radius:12px; padding:14px; text-align:center; }
+    .label{ font-size:14px; color:var(--muted); margin-bottom:8px; }
+    input[type="number"]{
+      width:100%; max-width:220px; padding:10px 12px;
+      border:1px solid var(--input); border-radius:10px; background:#fff; color:var(--ink);
+      font-size:16px; outline:none; box-shadow:0 2px 0 #00000005; text-align:center;
+    }
+    input[type="number"]:focus{ border-color:var(--primary); box-shadow:0 0 0 6px var(--ring); }
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 10px;
-            padding: 10px;
-            background: rgba(20, 55, 82, 0.8);
-            border: 1px solid #436279;
-            border-radius: 3px;
-        }
+    /* 結果與重點 */
+    .note{ color:var(--muted); font-size:13px; }
+    .result{
+      margin-top:10px; padding:12px 14px;
+      background: linear-gradient(180deg, #fff, var(--soft));
+      border-left:4px solid var(--primary);
+      border-radius:12px; box-shadow:0 6px 18px rgba(210,105,30,.10);
+      animation: fadeInUp .35s ease both;
+    }
+    .big{
+      text-align:center; margin:10px 0 4px;
+      background:#fff; border:1px solid var(--input); border-radius:12px; padding:12px;
+      color:var(--primary); font-weight:900; font-size: clamp(18px, 2.4vw, 22px); letter-spacing:.4px;
+      animation: pulse 4.5s ease-in-out infinite;
+    }
+    .summary{
+      text-align:center; padding:18px; margin-top:8px;
+      background: linear-gradient(180deg, var(--primary-2), var(--primary));
+      border-radius:14px; color:#fff; font-weight:900; letter-spacing:.5px;
+      box-shadow: 0 10px 26px rgba(210,105,30,.28);
+      font-size: clamp(22px, 3vw, 28px);
+      animation: fadeInUp .4s ease both;
+    }
+    .summary small{ display:block; font-weight:600; opacity:.9; margin-top:6px; font-size:.5em; }
 
-        .grid-item {
-            background: rgba(67, 98, 121, 0.3);
-            border: 1px solid #436279;
-            padding: 15px;
-            text-align: center;
-        }
+    /* 折扣開關列 */
+    .switch-row{
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      padding:10px; margin-bottom:8px;
+      background: linear-gradient(180deg, var(--bg-accent), transparent 60%);
+      border:1px dashed rgba(210,105,30,.25);
+      border-radius: 12px; color:var(--muted); font-size:14px;
+    }
+    .switch{ position:relative; width:60px; height:34px; border-radius:999px; background: linear-gradient(180deg, var(--soft), var(--input)); box-shadow: inset 0 2px 6px #00000010; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider{ position:absolute; inset:4px; border-radius:999px; background: linear-gradient(180deg, #fff, #fff6ee); }
+    .slider::before{ content:""; position:absolute; left:3px; top:3px; width:24px; height:24px; border-radius:50%; background:linear-gradient(180deg,#fff,#f5ede6); box-shadow:0 2px 8px #00000020; transition: transform .35s cubic-bezier(.22,1,.36,1); }
+    input:checked + .slider::before{ transform: translateX(26px); }
 
-        input {
-            width: 100%;
-            max-width: 200px;
-            height: 40px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #436279;
-            color: #fff;
-            text-align: center;
-            font-size: clamp(16px, 1.5vw, 18px);
-            padding: 5px;
-            border-radius: 4px;
-        }
+    /* 動畫 */
+    @keyframes fadeInUp{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+    @keyframes pulse{ 50%{ transform:scale(1.02); } }
 
-        input:focus {
-            outline: none;
-            border-color: #6a8ca8;
-            box-shadow: 0 0 5px #4a9eff;
-        }
-
-        .label {
-            font-size: clamp(12px, 1.5vw, 16px);
-            color: #8aabcb;
-            margin-bottom: 5px;
-        }
-
-        .value {
-            font-size: clamp(16px, 2vw, 20px);
-            color: #fff;
-            text-shadow: 0 0 4px #4a9eff;
-        }
-
-        .result {
-            padding: 15px;
-            background: rgba(20, 55, 82, 0.8);
-            border: 1px solid #436279;
-            border-radius: 3px;
-            margin-top: 15px;
-        }
-
-        .total {
-            font-size: clamp(24px, 3vw, 32px);
-            color: #4a9eff;
-            text-align: center;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 2px solid #436279;
-            border-radius: 5px;
-            margin: 20px 0;
-            animation: pulse 2s infinite;
-        }
-
-        .grand-total {
-            background: linear-gradient(to right, #1c4565, #0e2a3f);
-            border: 2px solid #4a9eff;
-            padding: 20px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
-            font-size: clamp(32px, 4vw, 48px);
-            color: #4a9eff;
-            animation: pulse 3s infinite;
-        }
-
-        /* 新增開關按鈕樣式 */
-        .switch-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 15px 0;
-            padding: 10px;
-            background: rgba(20, 55, 82, 0.8);
-            border: 1px solid #436279;
-            border-radius: 3px;
-        }
-
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-            margin: 0 10px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            transition: .4s;
-            border-radius: 34px;
-            border: 1px solid #436279;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 3px;
-            bottom: 3px;
-            background-color: #4a9eff;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: rgba(74, 158, 255, 0.3);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-
-        .discount-text {
-            font-size: clamp(14px, 1.5vw, 18px);
-            color: #8aabcb;
-        }
-
-        @keyframes pulse {
-            50% { 
-                transform: scale(1.05);
-                text-shadow: 0 0 20px #4a9eff;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container { padding: 10px; }
-            .grid { grid-template-columns: 1fr; }
-            input { max-width: 100%; }
-        }
-    </style>
+    @media (max-width: 520px){
+      body{ padding:16px; }
+      .grid{ grid-template-columns:1fr; }
+      input[type="number"]{ max-width:100%; }
+    }
+  </style>
 </head>
 <body>
+  <!-- 背景秋葉 -->
+  <div class="leaf-layer" id="leafLayer" aria-hidden="true"></div>
+
+  <div class="wrap">
     <div class="container">
-        <div class="switch-container">
-            <span class="discount-text">禮拜三秘藥優惠</span>
-            <label class="switch">
-                <input type="checkbox" id="wednesdayDiscount" oninput="calc()">
-                <span class="slider"></span>
-            </label>
-            <span class="discount-text">95折</span>
-        </div>
+      <div class="header">
+        <h1>艾菲 & 鑰匙｜簡易計算器</h1>
+        <div class="sub">照著步驟走，每一步只填一兩個數字，就能看懂。</div>
+      </div>
 
-        <div class="base-window">
-            <div class="header">艾菲高級困難通行證計算</div>
-            <div class="grid">
-                <div class="grid-item">
-                    <div class="label">不完整艾菲地下城通行證價格</div>
-                    <input type="number" id="passPrice" value="0" oninput="calc()">
-                </div>
-                <div class="grid-item">
-                    <div class="label">復原的秘藥價格（固定）</div>
-                    <input type="number" value="50000" disabled>
-                </div>
-                <div class="grid-item">
-                    <div class="label">需要製作通行證數量</div>
-                    <input type="number" id="passQuantity" value="1" min="1" oninput="calc()">
-                </div>
-            </div>
-            <div id="passResult" class="result"></div>
+      <!-- 步驟 0：是不是禮拜三（只影響秘藥） -->
+      <div class="step">
+        <div class="step-title">
+          <span class="badge">步驟 0</span><span class="title-text">今天是禮拜三嗎？（秘藥 95 折）</span>
         </div>
-
-        <div class="base-window">
-            <div class="header">手紡車鑰匙計算</div>
-            <div class="grid">
-                <div class="grid-item">
-                    <div class="label">幼蟲蠶繭單價</div>
-                    <input type="number" id="cocoonPrice" value="0" oninput="calc()">
-                </div>
-                <div class="grid-item">
-                    <div class="label">需要製作鑰匙數量</div>
-                    <input type="number" id="keyQuantity" value="1" min="1" oninput="calc()">
-                </div>
-            </div>
-            <div id="keyResult" class="result"></div>
+        <div class="switch-row">
+          <span class="note">秘藥原價 50,000，週三會變 95 折。</span>
+          <label class="switch" title="勾選表示週三">
+            <input type="checkbox" id="wednesdayDiscount" oninput="calc()">
+            <span class="slider"></span>
+          </label>
+          <span class="note">勾選＝有折扣</span>
         </div>
+      </div>
 
-        <div class="grand-total" id="grandTotal"></div>
+      <!-- 步驟 1：通行證花多少 -->
+      <div class="step">
+        <div class="step-title">
+          <span class="badge">步驟 1</span><span class="title-text">通行證要花多少？</span>
+        </div>
+        <div class="grid">
+          <div class="cell">
+            <div class="label">不完整通行證單價（瑪幣）<br><span class="note">例：120,000</span></div>
+            <input type="number" id="passPrice" value="0" oninput="calc()">
+          </div>
+          <div class="cell">
+            <div class="label">要做幾張通行證？<br><span class="note">正整數</span></div>
+            <input type="number" id="passQuantity" value="1" min="1" oninput="calc()">
+          </div>
+          <div class="cell">
+            <div class="label">每張需要的秘藥數量（固定）</div>
+            <input type="number" value="3" disabled>
+            <div class="note">週三才會打折</div>
+          </div>
+        </div>
+        <div id="passOut" class="result"></div>
+      </div>
+
+      <!-- 步驟 2：要做幾把鑰匙、要花多少 -->
+      <div class="step">
+        <div class="step-title">
+          <span class="badge">步驟 2</span><span class="title-text">鑰匙要花多少？</span>
+        </div>
+        <div class="grid">
+          <div class="cell">
+            <div class="label">蠶繭單價（瑪幣）<br><span class="note">例：5,000</span></div>
+            <input type="number" id="cocoonPrice" value="0" oninput="calc()">
+          </div>
+          <div class="cell">
+            <div class="label">想做幾把鑰匙？<br><span class="note">正整數</span></div>
+            <input type="number" id="keyQuantity" value="1" min="1" oninput="calc()">
+          </div>
+          <div class="cell">
+            <div class="label">每把需要蠶繭（固定）</div>
+            <input type="number" value="5" disabled>
+          </div>
+        </div>
+        <div id="keyOut" class="result"></div>
+      </div>
+
+      <!-- 步驟 3：我身上的蠶繭可以做幾把 -->
+      <div class="step">
+        <div class="step-title">
+          <span class="badge">步驟 3</span><span class="title-text">我身上的蠶繭，可以做幾把鑰匙？</span>
+        </div>
+        <div class="grid">
+          <div class="cell">
+            <div class="label">我有幾「組」蠶繭？<br><span class="note">例：10 組</span></div>
+            <input type="number" id="stockSets" value="10" min="0" oninput="calc()">
+          </div>
+          <div class="cell">
+            <div class="label">每組幾個？<br><span class="note">預設 5 個／組</span></div>
+            <input type="number" id="setSize" value="5" min="1" oninput="calc()">
+          </div>
+        </div>
+        <div id="stockOut" class="result"></div>
+      </div>
+
+      <!-- 總結 -->
+      <div id="grandOut" class="summary"></div>
     </div>
+  </div>
 
-    <script>
-        function formatChineseNumber(num) {
-            if (num === 0) return '0';
-            
-            const units = ['', '萬', '億', '兆', '京'];
-            const segments = [];
-            let tempNum = num;
-            
-            for (let i = 0; i < units.length; i++) {
-                const segment = tempNum % 10000;
-                if (segment !== 0 || i === 0) {
-                    let formattedSegment;
-                    if (i === 0) {
-                        formattedSegment = segment === 0 ? '' : segment.toString();
-                    } else {
-                        formattedSegment = segment.toString().padStart(4, '0');
-                        if (formattedSegment !== '0000') {
-                            formattedSegment = parseInt(formattedSegment).toString();
-                        }
-                    }
-                    if (formattedSegment !== '') {
-                        segments.unshift(formattedSegment + units[i]);
-                    }
-                }
-                tempNum = Math.floor(tempNum / 10000);
-                if (tempNum === 0) break;
-            }
-            
-            return segments.join('') || '0';
+  <script>
+    /* 秋葉生成（效能友善） */
+    (function genLeaves(){
+      const layer = document.getElementById('leafLayer');
+      const n = Math.min(18, Math.floor(window.innerWidth/70));
+      const colors = ['#d2691e','#ffb347','#a0522d','#e07a3f'];
+      for(let i=0;i<n;i++){
+        const s = document.createElement('span');
+        s.className='leaf';
+        const x = Math.random()*100;
+        const dur = 14 + Math.random()*10;
+        const delay = -Math.random()*dur;
+        const rot = (Math.random()*60-30)+'deg';
+        s.style.setProperty('--x', x+'vw');
+        s.style.setProperty('--dur', dur+'s');
+        s.style.setProperty('--delay', delay+'s');
+        s.style.setProperty('--rot', rot);
+        s.style.setProperty('--leaf-color', colors[i%colors.length]);
+        layer.appendChild(s);
+      }
+    })();
+
+    /* 中文單位（萬／億／兆／京） */
+    function cn(num){
+      if (!isFinite(num)) return '0';
+      if (num === 0) return '0';
+      const units = ['', '萬', '億', '兆', '京'];
+      const segs = [];
+      let t = Math.floor(Math.abs(num));
+      for(let i=0;i<units.length;i++){
+        const seg = t % 10000;
+        if (seg !== 0 || i === 0){
+          let f = '';
+          if (i === 0){ f = seg === 0 ? '' : String(seg); }
+          else{
+            f = String(seg).padStart(4,'0');
+            if (f !== '0000') f = String(parseInt(f,10));
+          }
+          if (f) segs.unshift(f + units[i]);
         }
+        t = Math.floor(t/10000);
+        if (t === 0) break;
+      }
+      return (num < 0 ? '－' : '') + segs.join('');
+    }
+    const fmt = (n)=> Number.isFinite(n) ? n.toLocaleString() : '0';
 
-        function calc() {
-            // 獲取並驗證輸入值
-            const passPrice = +document.getElementById('passPrice').value || 0;
-            const passQty = +document.getElementById('passQuantity').value || 1;
-            const cocoonPrice = +document.getElementById('cocoonPrice').value || 0;
-            const keyQty = +document.getElementById('keyQuantity').value || 1;
-            const isWednesday = document.getElementById('wednesdayDiscount').checked;
+    function calc(){
+      // 取值
+      const passPrice = +document.getElementById('passPrice').value || 0;
+      const passQty   = Math.max(1, +document.getElementById('passQuantity').value || 1);
+      const cocoPrice = +document.getElementById('cocoonPrice').value || 0;
+      const keyQty    = Math.max(1, +document.getElementById('keyQuantity').value || 1);
+      const wed       = document.getElementById('wednesdayDiscount').checked;
+      const stockSets = Math.max(0, +document.getElementById('stockSets').value || 0);
+      const setSize   = Math.max(1, +document.getElementById('setSize').value || 5);
 
-            // 常數設定
-            const potionPrice = isWednesday ? 50000 * 0.95 : 50000; // 只有秘藥價格套用折扣
-            const potionNeeded = 3;
-            const cocoonNeeded = 5;
+      // 常數
+      const POTION_BASE = 50000;
+      const POTION_NEED = 3;
+      const COCO_NEED   = 5;
 
-            // 計算成本
-            const passCost = passPrice * passQty;
-            const potionCost = potionPrice * potionNeeded * passQty;
-            const passTotal = passCost + potionCost;
-            const keyTotal = cocoonPrice * cocoonNeeded * keyQty;
+      // 通行證計算
+      const potionPrice = wed ? POTION_BASE * 0.95 : POTION_BASE;
+      const passCost    = passPrice * passQty;
+      const potionCost  = potionPrice * POTION_NEED * passQty;
+      const passTotal   = passCost + potionCost;
 
-            // 更新顯示
-            document.getElementById('passResult').innerHTML = `
-                <div class="value">材料需求：通行證 × ${passQty} | 秘藥 × ${potionNeeded * passQty}</div>
-                <div class="value">通行證：${formatChineseNumber(passCost)} | 秘藥：${formatChineseNumber(potionCost)}</div>
-                <div class="total">總成本：${formatChineseNumber(passTotal)} 瑪幣</div>
-                <div class="label">平均：${formatChineseNumber(Math.round(passTotal/passQty))} 瑪幣/張</div>
-                ${isWednesday ? '<div class="label" style="color: #4a9eff">秘藥已套用禮拜三95折優惠！</div>' : ''}
-            `;
+      // 鑰匙計算（成本）
+      const cocoNeedTotal = COCO_NEED * keyQty;
+      const keyTotal = cocoPrice * cocoNeedTotal;
 
-            document.getElementById('keyResult').innerHTML = `
-                <div class="value">材料需求：蠶繭 × ${cocoonNeeded * keyQty}</div>
-                <div class="total">總成本：${formatChineseNumber(keyTotal)} 瑪幣</div>
-                <div class="label">平均：${formatChineseNumber(Math.round(keyTotal/keyQty))} 瑪幣/把</div>
-            `;
+      // 存量→可做幾把
+      const stockTotalCoco = stockSets * setSize;
+      const craftableKeys  = Math.floor(stockTotalCoco / COCO_NEED);
+      const leftoverCoco   = stockTotalCoco % COCO_NEED;
 
-            document.getElementById('grandTotal').innerHTML = `
-                總成本：${formatChineseNumber(passTotal + keyTotal)} 瑪幣<br>
-                <div style="font-size:0.4em;margin-top:10px">
-                    (通行證：${formatChineseNumber(passTotal)} + 鑰匙：${formatChineseNumber(keyTotal)})
-                    ${isWednesday ? '<br><span style="color: #4a9eff">秘藥已套用禮拜三95折優惠！</span>' : ''}
-                </div>
-            `;
-        }
+      // 總結（通行證+鑰匙購買成本，不含存量換算）
+      const grand = passTotal + keyTotal;
 
-        calc(); // 初始計算
-    </script>
+      // 輸出：步驟 1
+      document.getElementById('passOut').innerHTML = `
+        <div class="note">每張通行證要 <b>${POTION_NEED}</b> 瓶秘藥，秘藥單價：<b>${fmt(Math.round(potionPrice))}</b>（${wed ? '已套用 95 折' : '原價'}）</div>
+        <div class="big">通行證花費：${fmt(Math.round(passTotal))} 瑪幣（${cn(Math.round(passTotal))}）</div>
+        <div class="note">＝ 通行證 ${fmt(passPrice)} × ${passQty} ＋ 秘藥 ${fmt(Math.round(potionPrice))} × ${POTION_NEED * passQty}</div>
+        <div class="note">平均每張：約 <b>${fmt(Math.round(passTotal/passQty))}</b> 瑪幣</div>
+      `;
+
+      // 輸出：步驟 2
+      document.getElementById('keyOut').innerHTML = `
+        <div class="note">每把鑰匙要 <b>${COCO_NEED}</b> 個蠶繭，你想做 <b>${keyQty}</b> 把，共需要 <b>${cocoNeedTotal}</b> 個。</div>
+        <div class="big">鑰匙花費：${fmt(Math.round(keyTotal))} 瑪幣（${cn(Math.round(keyTotal))}）</div>
+        <div class="note">＝ 蠶繭 ${fmt(cocoPrice)} × ${cocoNeedTotal}</div>
+        <div class="note">平均每把：約 <b>${fmt(Math.round(keyTotal/keyQty))}</b> 瑪幣</div>
+      `;
+
+      // 輸出：步驟 3
+      document.getElementById('stockOut').innerHTML = `
+        <div class="note">你有 <b>${stockSets}</b> 組 × <b>${setSize}</b> 個／組 ＝ <b>${stockTotalCoco}</b> 個蠶繭。</div>
+        <div class="big">可做鑰匙：${craftableKeys} 把</div>
+        <div class="note">剩下蠶繭：${leftoverCoco} 個（每把要 ${COCO_NEED} 個）</div>
+      `;
+
+      // 總結
+      document.getElementById('grandOut').innerHTML = `
+        總共要花：${fmt(Math.round(grand))} 瑪幣（${cn(Math.round(grand))}）
+        <small>＝ 通行證 ${fmt(Math.round(passTotal))} ＋ 鑰匙 ${fmt(Math.round(keyTotal))}</small>
+      `;
+    }
+
+    // 初始
+    calc();
+
+    // 即時回饋：輸入框滾輪可能誤觸，加個保護（可移除）
+    document.querySelectorAll('input[type="number"]').forEach(el=>{
+      el.addEventListener('wheel', e=> e.target === document.activeElement ? null : e.preventDefault(), {passive:false});
+    });
+  </script>
 </body>
 </html>
